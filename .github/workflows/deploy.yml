@@ -68,9 +68,14 @@ jobs:
           echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
           echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
 
+      - name: Debug Environment Variables
+        run: |
+          echo "DEPLOYMENT_URL: $DEPLOYMENT_URL"
+          echo "API_RESPONSE: $API_RESPONSE"
+
       - name: Save Deployment Data
         run: |
-          echo '{"PREVIEW_URL":"${DEPLOYMENT_URL}","API_RESPONSE":"${API_RESPONSE}"}' > output_${{ matrix.iteration }}.json
+          echo "{\"PREVIEW_URL\":\"${DEPLOYMENT_URL}\",\"API_RESPONSE\":\"${API_RESPONSE}\"}" > output_${{ matrix.iteration }}.json
 
       - name: Upload Deployment Data
         uses: actions/upload-artifact@v3
