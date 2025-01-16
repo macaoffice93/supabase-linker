@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       runs:
-        description: 'Number of times to invoke the deploy workflow'
+        description: 'Number of links to generate'
         required: true
         type: string
 
@@ -14,17 +14,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
-      - name: Install GitHub CLI and jq
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gh jq
-
-      - name: Authenticate GitHub CLI
-        run: |
-          echo "$GH_PAT" | gh auth login --with-token
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
 
       - name: Initialize Loop
         id: initialize
