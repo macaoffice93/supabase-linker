@@ -5,11 +5,42 @@ on:
     inputs:
       runs:
         description: 'Number of times to invoke the deploy workflow'
-        required: false
-        type: string # Input must be a string
+        required: true
+        type: string
 
 jobs:
-  invoke_reusable:
-    uses: ./.github/workflows/reusable_deploy.yml
-    with:
-      runs: ${{ inputs.runs }}
+  invoke_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Initialize Loop
+        id: initialize
+        run: echo "Preparing to invoke deploy workflow ${{ inputs.runs }} times."
+
+      - name: Dynamic Deployment Steps
+        id: invoke
+        run: |
+          RUNS=${{ inputs.runs }}
+          for ((i = 1; i <= RUNS; i++)); do
+            echo "Running deploy step #$i..."
+            gh workflow run deploy.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              --json > output_$i.json
+            DEPLOYMENT_URL=$(jq -r '.outputs.PREVIEW_URL' output_$i.json)
+            echo "Deployment URL for step #$i: $DEPLOYMENT_URL"
+            echo "::group::Deployment #$i"
+            echo "Triggered deploy with URL: $DEPLOYMENT_URL"
+            echo "::endgroup::"
+          done
+
+      - name: Summarize Deployments
+        id: summarize
+        run: |
+          echo "All deployments completed. Here's a summary:"
+          for ((i = 1; i <= RUNS; i++)); do
+            OUTPUT=$(cat output_$i.json)
+            echo "Deployment #$i: $OUTPUT"
+          done
