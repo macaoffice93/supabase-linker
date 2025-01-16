@@ -22,12 +22,10 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel
+      - name: Deploy to Vercel Action
         uses: BetaHuhn/deploy-to-vercel-action@v1
         with:
-          github-token: ${{ secrets.GH_PAT }} # Your Personal Access Token
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-
-
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the default GITHUB_TOKEN provided by Actions
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }} # Your personal Vercel token
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }} # Organization ID from Vercel
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }} # Project ID from Vercel
