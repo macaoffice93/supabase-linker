@@ -2,7 +2,13 @@ name: Deploy to Vercel
 
 on:
   workflow_dispatch:
-
+    inputs:
+      runs:
+        description: 'Number of runs'
+        required: false
+        default: 5
+        type: number
+        
 jobs:
   deploy:
     runs-on: ubuntu-latest
