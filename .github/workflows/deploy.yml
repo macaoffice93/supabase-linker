@@ -26,9 +26,9 @@ jobs:
           # Generate compact JSON
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
-          echo "iterations=$json" >> $GITHUB_ENV
-        outputs:
-          iterations: ${{ env.iterations }}
+          echo "::set-output name=iterations::$json"
+        env:
+          runs: ${{ inputs.runs }}
 
   deploy_and_fetch:
     needs: setup
@@ -61,11 +61,13 @@ jobs:
           echo "Fetching /api/config from $DEPLOYMENT_URL..."
           RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
           if [ -z "$RESPONSE" ]; then
-            echo '{"PREVIEW_URL": "'${DEPLOYMENT_URL}'", "API_RESPONSE": "Error: No response"}' > output_${{ matrix.iteration }}.json
-          else
-            echo '{"PREVIEW_URL": "'${DEPLOYMENT_URL}'", "API_RESPONSE": "'${RESPONSE}'"}' > output_${{ matrix.iteration }}.json
+            echo "Error: No response from /api/config."
+            exit 1
           fi
-
+          echo "API Response: $RESPONSE"
+          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
+          echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
+  
   summary:
     needs: deploy_and_fetch
     runs-on: ubuntu-latest
@@ -86,6 +88,7 @@ jobs:
               echo "- **API Response:** (No Data)" >> summary.md
             fi
           done
+          echo "Generated Deployment Summary:"
           cat summary.md
 
       - name: Add Summary to GitHub Summary
