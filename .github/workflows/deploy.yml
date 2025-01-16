@@ -87,7 +87,12 @@ jobs:
 
       - name: Save Deployment Data
         run: |
-          echo "{\"PREVIEW_URL\":\"${DEPLOYMENT_URL}\",\"API_RESPONSE\":\"${API_RESPONSE}\"}" > output_${{ matrix.iteration }}.json
+          jq -n --arg url "$DEPLOYMENT_URL" --arg api "$API_RESPONSE" \
+            '{"PREVIEW_URL": $url, "API_RESPONSE": $api}' > output_${{ matrix.iteration }}.json
+
+      - name: Debug Saved Deployment Data
+        run: |
+          cat output_${{ matrix.iteration }}.json
 
       - name: Upload Deployment Data
         uses: actions/upload-artifact@v3
