@@ -29,11 +29,10 @@ jobs:
             echo "Error: 'runs' must be a positive integer."
             exit 1
           fi
-          # Generate compact JSON
-          json=$(seq 1 "$runs" | jq -c -R . | jq -s .)
+          # Generate compact JSON with no extra spaces or newlines
+          json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
           echo "iterations=$json" >> $GITHUB_ENV
-
 
   deploy_and_fetch:
     needs: setup
