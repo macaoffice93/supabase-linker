@@ -23,7 +23,7 @@ jobs:
             echo "Error: 'runs' must be a positive integer."
             exit 1
           fi
-          # Generate compact JSON
+          # Generate compact JSON array
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
           echo "::set-output name=iterations::$json"
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        iteration: ${{ fromJSON(needs.setup.outputs.iterations) }}
+        iteration: ${{ fromJson(needs.setup.outputs.iterations) }}
       max-parallel: 1
     steps:
       - name: Checkout Code
@@ -86,12 +86,16 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: deployment-data
+          path: ./deployment-data
 
       - name: Combine Deployment Summaries
         run: |
           echo "## Deployment Summary" > summary.md
-          for i in $(seq 1 ${{ needs.setup.outputs.iterations | fromJson | length }}); do
-            FILE="output_$i.json"
+          # Determine the number of runs by parsing the iterations JSON
+          RUN_COUNT=${{ fromJson(needs.setup.outputs.iterations).length }}
+          echo "Total Deployments: $RUN_COUNT"
+          for i in $(seq 1 "$RUN_COUNT"); do
+            FILE="./deployment-data/output_$i.json"
             if [ -f "$FILE" ]; then
               DEPLOYMENT_URL=$(jq -r '.PREVIEW_URL' "$FILE")
               API_RESPONSE=$(jq -r '.API_RESPONSE' "$FILE")
