@@ -54,6 +54,10 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           PRODUCTION: false
 
+      - name: Debug Deploy Outputs
+        run: |
+          echo "PREVIEW_URL: ${{ steps.deploy.outputs.PREVIEW_URL }}"
+
       - name: Fetch /api/config
         id: fetch_api_config
         run: |
