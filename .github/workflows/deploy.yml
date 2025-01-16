@@ -23,6 +23,14 @@ jobs:
             echo "Error: 'runs' must be a positive integer."
             exit 1
           fi
+          if [ "$runs" -eq 0 ]; then
+            echo "Error: 'runs' must be greater than 0."
+            exit 1
+          fi
+          if [ "$runs" -gt 10 ]; then
+            echo "Error: 'runs' cannot exceed 10."
+            exit 1
+          fi
           # Generate compact JSON array
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
@@ -88,7 +96,7 @@ jobs:
           path: output_${{ matrix.iteration }}.json
 
   summary:
-    needs: deploy_and_fetch
+    needs: [deploy_and_fetch, setup]
     runs-on: ubuntu-latest
     steps:
       - name: Download Deployment Data
