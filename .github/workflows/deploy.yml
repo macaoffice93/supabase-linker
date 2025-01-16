@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       runs:
-        description: 'Number of runs'
+        description: 'Number of times to run the deployment'
         required: false
         default: 5
         type: number
-        
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,41 +19,52 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel
-        id: vercel_deploy
-        uses: BetaHuhn/deploy-to-vercel-action@v1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Deploy Multiple Times
+        id: deploy_loop
+        env:
+          RUNS: ${{ github.event.inputs.runs }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          PRODUCTION: false
-
-      - name: Fetch /api/config
-        if: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_CREATED }} # Ensure deployment was created
-        id: fetch_api_config
         run: |
-          DEPLOYMENT_URL="${{ steps.vercel_deploy.outputs.PREVIEW_URL }}"
-          echo "Fetching /api/config from $DEPLOYMENT_URL..."
-          RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
-          if [ -z "$RESPONSE" ]; then
-            echo "Error: No response from /api/config."
-            exit 1
-          fi
-          echo "API Response: $RESPONSE"
-          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
-          echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
+          echo "Triggering deployment ${RUNS} times..."
+          for ((i = 1; i <= RUNS; i++)); do
+            echo "Deployment #$i..."
+            OUTPUT=$(vercel deploy --token=$VERCEL_TOKEN --prod=false 2>&1)
+            DEPLOYMENT_URL=$(echo "$OUTPUT" | grep -oP 'https://.*\.vercel\.app')
+            
+            if [ -z "$DEPLOYMENT_URL" ]; then
+              echo "Failed to retrieve deployment URL for run #$i."
+              exit 1
+            fi
+
+            echo "Deployment URL #$i: $DEPLOYMENT_URL"
+
+            # Fetch /api/config from the deployed URL
+            RESPONSE=$(curl -s "$DEPLOYMENT_URL/api/config")
+            if [ -z "$RESPONSE" ]; then
+              echo "Failed to fetch /api/config for deployment #$i."
+              exit 1
+            fi
+
+            echo "API Response for deployment #$i: $RESPONSE"
+            echo "$DEPLOYMENT_URL, $RESPONSE" >> summary.log
+          done
 
       - name: Add Deployment Summary
-        if: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_CREATED }} # Ensure deployment was created
         uses: actions/github-script@v6
         with:
           script: |
-            const deploymentUrl = process.env.DEPLOYMENT_URL;
-            const apiResponse = process.env.API_RESPONSE;
+            const fs = require('fs');
+            const summary = fs.readFileSync('summary.log', 'utf-8');
+            const formattedSummary = summary.split('\n').filter(Boolean).map((line, index) => {
+              const [url, response] = line.split(', ');
+              return `- Deployment #${index + 1}: [${url}](${url})\n  API Response: \`${response}\``;
+            }).join('\n\n');
+            
             const summaryContent = `
             ## Vercel Deployment Summary
-            - **Deployment URL:** [Visit Deployment](${deploymentUrl})
-            - **API Response from /api/config:** \`${apiResponse}\`
+            ${formattedSummary}
             `;
             core.summary.addRaw(summaryContent).write();
