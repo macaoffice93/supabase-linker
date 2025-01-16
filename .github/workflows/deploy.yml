@@ -2,9 +2,6 @@ name: Deploy to Vercel
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
   pull_request:
     types:
       - opened
@@ -29,20 +26,30 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          OUTPUT_FILE: vercel.json # Save deployment details to a file
 
-      - name: Debug Deployment Output
+      - name: Extract Deployment URL
         run: |
-          echo "Debugging Deployment Output..."
-          echo "Deployment Output: ${{ steps.vercel_deploy.outputs }}"
+          if [ ! -f "vercel.json" ]; then
+            echo "Error: Deployment output file not found."
+            exit 1
+          fi
+          DEPLOYMENT_URL=$(cat vercel.json | jq -r '.url')
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "Error: Deployment URL not found in output."
+            exit 1
+          fi
+          echo "Deployment URL: $DEPLOYMENT_URL"
+          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
 
       - name: Fetch /api/config
         run: |
-          echo "Fetching /api/config..."
-          if [ -z "${DEPLOYMENT_URL}" ]; then
-            echo "Error: DEPLOYMENT_URL is empty!"
+          echo "Fetching /api/config from $DEPLOYMENT_URL..."
+          RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
+          if [ -z "$RESPONSE" ]; then
+            echo "Error: No response from /api/config."
             exit 1
           fi
-          RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
           echo "API Response: $RESPONSE"
           echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
 
