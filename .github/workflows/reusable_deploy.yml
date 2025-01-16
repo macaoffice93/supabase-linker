@@ -6,7 +6,7 @@ on:
       runs:
         description: 'Number of times to invoke the deploy workflow'
         required: false
-        type: number
+        type: string # Accept as string to avoid type mismatch
 
 jobs:
   reusable_deploy:
@@ -21,12 +21,13 @@ jobs:
       - name: Invoke Deploy Workflow
         id: deploy_loop
         env:
-          RUNS: ${{ inputs.runs || 3 }} # Default to 3 runs if not provided
+          RUNS: ${{ inputs.runs || '3' }} # Default to '3' if input is not provided
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Invoking the deploy workflow ${RUNS} times..."
+          RUNS_INT=$((RUNS)) # Convert to integer
+          echo "Invoking the deploy workflow ${RUNS_INT} times..."
           > output.log # Initialize log file
-          for ((i = 1; i <= RUNS; i++)); do
+          for ((i = 1; i <= RUNS_INT; i++)); do
             echo "Triggering deploy workflow #$i..."
             OUTPUT=$(gh workflow run deploy.yml \
               --repo "$GITHUB_REPOSITORY" \
