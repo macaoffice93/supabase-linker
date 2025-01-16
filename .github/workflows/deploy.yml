@@ -19,14 +19,14 @@ jobs:
         run: |
           runs=${{ github.event.inputs.runs }}
           echo "Generating iterations for $runs runs."
-          if ! [[ $runs =~ ^[0-9]+$ ]]; then
+          if ! [[ "$runs" =~ ^[0-9]+$ ]]; then
             echo "Error: 'runs' must be a positive integer."
             exit 1
           fi
           # Generate compact JSON array
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
-          echo "::set-output name=iterations::$json"
+          echo "iterations=$json" >> $GITHUB_OUTPUT
         env:
           runs: ${{ github.event.inputs.runs }}
 
@@ -91,9 +91,10 @@ jobs:
       - name: Combine Deployment Summaries
         run: |
           echo "## Deployment Summary" > summary.md
-          # Determine the number of runs by parsing the iterations JSON
-          RUN_COUNT=${{ fromJson(needs.setup.outputs.iterations).length }}
-          echo "Total Deployments: $RUN_COUNT"
+          # Parse the iterations JSON and get the count
+          RUN_COUNT=$(echo '${{ needs.setup.outputs.iterations }}' | jq '. | length')
+          echo "Total Deployments: $RUN_COUNT" >> summary.md
+          echo "" >> summary.md
           for i in $(seq 1 "$RUN_COUNT"); do
             FILE="./deployment-data/output_$i.json"
             if [ -f "$FILE" ]; then
@@ -102,10 +103,12 @@ jobs:
               echo "### Deployment #$i" >> summary.md
               echo "- **Deployment URL:** [${DEPLOYMENT_URL}](${DEPLOYMENT_URL})" >> summary.md
               echo "- **API Response:** \`${API_RESPONSE}\`" >> summary.md
+              echo "" >> summary.md
             else
               echo "### Deployment #$i" >> summary.md
               echo "- **Deployment URL:** (No Data)" >> summary.md
               echo "- **API Response:** (No Data)" >> summary.md
+              echo "" >> summary.md
             fi
           done
           echo "Generated Deployment Summary:"
