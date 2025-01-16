@@ -19,24 +19,13 @@ jobs:
         id: initialize
         run: echo "Preparing to invoke deploy workflow ${{ github.event.inputs.runs }} times."
 
-      - name: Dynamic Deployment Steps
-        id: invoke
+      - name: Trigger
         env:
-          RUNS: ${{ github.event.inputs.runs }}
-          GH_PAT: ${{ secrets.GH_PAT }}
+          RUNS: ${{ inputs.runs }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for ((i = 1; i <= RUNS; i++)); do
-            echo "Running deploy step #$i..."
-            OUTPUT=$(gh workflow run deploy.yml \
-              --repo "$GITHUB_REPOSITORY" \
-              --ref main \
-              --json)
-            echo "$OUTPUT" > output_$i.json
-            DEPLOYMENT_URL=$(echo "$OUTPUT" | jq -r '.runs[0].url')
-            echo "Deployment URL for step #$i: $DEPLOYMENT_URL"
-            echo "::group::Deployment #$i"
-            echo "Triggered deploy with URL: $DEPLOYMENT_URL"
-            echo "::endgroup::"
+          for (( i=0; i<RUNS; i++ )); do
+            gh workflow run --repo "$GITHUB_REPOSITORY" deploy
           done
 
       - name: Summarize Deployments
