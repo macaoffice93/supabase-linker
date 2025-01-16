@@ -1,0 +1,55 @@
+name: Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      runs:
+        description: 'Number of times to invoke the deploy workflow'
+        required: true
+        type: number
+
+jobs:
+  reusable_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install jq (for JSON processing)
+        run: sudo apt-get install -y jq
+
+      - name: Invoke Deploy Workflow
+        id: deploy_loop
+        env:
+          RUNS: ${{ inputs.runs }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Invoking the deploy workflow ${RUNS} times..."
+          > output.log # Initialize log file
+          for ((i = 1; i <= RUNS; i++)); do
+            echo "Triggering deploy workflow #$i..."
+            OUTPUT=$(gh workflow run deploy.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref main \
+              --json)
+            echo "$OUTPUT" >> output.log
+          done
+
+      - name: Aggregate Outputs
+        id: aggregate_outputs
+        run: |
+          echo "Aggregating outputs from all deploy runs..."
+          cat output.log
+
+      - name: Set Summary
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('output.log', 'utf-8');
+            const deployments = log.split('\n').filter(Boolean).map((line, index) => {
+              const data = JSON.parse(line);
+              return `- Deployment #${index + 1}: URL: ${data.url}, Status: ${data.status}`;
+            }).join('\n');
+            const summary = `## Deployment Summary\n\n${deployments}`;
+            core.summary.addRaw(summary).write();
