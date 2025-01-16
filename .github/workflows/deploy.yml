@@ -1,10 +1,10 @@
 name: Deploy to Vercel
 
 on:
-  workflow_dispatch: # Allows manual trigger of the workflow
+  workflow_dispatch:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types:
       - opened
@@ -14,7 +14,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -31,24 +30,23 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      - name: Fetch Deployment URL
-        id: fetch_url
+      - name: Debug Deployment Output
         run: |
-          echo "Extracting deployment URL..."
-          DEPLOYMENT_URL=$(cat $GITHUB_ENV | grep DEPLOYMENT_URL | cut -d'=' -f2)
-          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
-          echo "Deployment URL: $DEPLOYMENT_URL"
+          echo "Debugging Deployment Output..."
+          echo "Deployment Output: ${{ steps.vercel_deploy.outputs }}"
 
-      - name: Call /api/config Endpoint
-        id: api_call
+      - name: Fetch /api/config
         run: |
           echo "Fetching /api/config..."
+          if [ -z "${DEPLOYMENT_URL}" ]; then
+            echo "Error: DEPLOYMENT_URL is empty!"
+            exit 1
+          fi
           RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
           echo "API Response: $RESPONSE"
           echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
 
       - name: Add Deployment Summary
-        if: success()
         uses: actions/github-script@v6
         with:
           script: |
@@ -56,8 +54,7 @@ jobs:
             const apiResponse = process.env.API_RESPONSE;
             const summaryContent = `
             ## Vercel Deployment Summary
-            - **Deployment ID:** \`${deploymentUrl}\`
-            - **URL:** [Visit Deployment](${deploymentUrl})
+            - **Deployment URL:** [Visit Deployment](${deploymentUrl})
             - **API Response from /api/config:** \`${apiResponse}\`
             `;
             core.summary.addRaw(summaryContent).write();
