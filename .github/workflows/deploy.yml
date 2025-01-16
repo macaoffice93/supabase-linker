@@ -31,7 +31,7 @@ jobs:
           fi
           json=$(seq 1 "$runs" | jq -R . | jq -s .)
           echo "Generated JSON: $json"
-          echo "::set-output name=iterations::$json"
+          echo "iterations=$json" >> $GITHUB_ENV
 
   deploy_and_fetch:
     needs: setup
