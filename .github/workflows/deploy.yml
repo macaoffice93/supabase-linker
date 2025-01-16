@@ -21,21 +21,13 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Extract Deployment URL from Logs
-        id: extract_url
-        run: |
-          echo "Extracting deployment URL from logs..."
-          DEPLOYMENT_URL=$(grep -oP '(?<=available at: ).*' <<< "${{ steps.vercel_deploy.outputs.consoleOutput }}" | tail -1)
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "Error: Deployment URL not found."
-            exit 1
-          fi
-          echo "Deployment URL: $DEPLOYMENT_URL"
-          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
+          PRODUCTION: false
 
       - name: Fetch /api/config
+        if: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_CREATED }} # Ensure deployment was created
+        id: fetch_api_config
         run: |
+          DEPLOYMENT_URL="${{ steps.vercel_deploy.outputs.PREVIEW_URL }}"
           echo "Fetching /api/config from $DEPLOYMENT_URL..."
           RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
           if [ -z "$RESPONSE" ]; then
@@ -43,9 +35,11 @@ jobs:
             exit 1
           fi
           echo "API Response: $RESPONSE"
+          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
           echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
 
       - name: Add Deployment Summary
+        if: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_CREATED }} # Ensure deployment was created
         uses: actions/github-script@v6
         with:
           script: |
