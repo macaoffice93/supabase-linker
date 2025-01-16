@@ -5,7 +5,7 @@ on:
     inputs:
       runs:
         description: 'Number of times to invoke the deploy workflow'
-        required: true
+        required: false
         type: number
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
       - name: Invoke Deploy Workflow
         id: deploy_loop
         env:
-          RUNS: ${{ inputs.runs }}
+          RUNS: ${{ inputs.runs || 3 }} # Default to 3 runs if not provided
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Invoking the deploy workflow ${RUNS} times..."
