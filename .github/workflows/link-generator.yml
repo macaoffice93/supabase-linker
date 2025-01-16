@@ -15,20 +15,31 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: gh auth login --with-token
+
       - name: Initialize Loop
         id: initialize
         run: echo "Preparing to invoke deploy workflow ${{ inputs.runs }} times."
 
       - name: Dynamic Deployment Steps
         id: invoke
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           RUNS=${{ inputs.runs }}
           for ((i = 1; i <= RUNS; i++)); do
             echo "Running deploy step #$i..."
-            gh workflow run deploy.yml \
+            OUTPUT=$(gh workflow run deploy.yml \
               --repo "$GITHUB_REPOSITORY" \
               --ref main \
-              --json > output_$i.json
+              --json)
+            echo "$OUTPUT" > output_$i.json
             DEPLOYMENT_URL=$(jq -r '.outputs.PREVIEW_URL' output_$i.json)
             echo "Deployment URL for step #$i: $DEPLOYMENT_URL"
             echo "::group::Deployment #$i"
