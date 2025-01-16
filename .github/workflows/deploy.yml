@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Vercel CLI
         run: npm install -g vercel
-      
+
       - name: Generate Matrix
         id: generate_matrix
         run: |
@@ -29,10 +29,12 @@ jobs:
             echo "Error: 'runs' must be a positive integer."
             exit 1
           fi
-          # Generate compact JSON with no extra spaces or newlines
+          # Generate compact JSON
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
           echo "iterations=$json" >> $GITHUB_ENV
+        outputs:
+          iterations: ${{ env.iterations }}
 
   deploy_and_fetch:
     needs: setup
