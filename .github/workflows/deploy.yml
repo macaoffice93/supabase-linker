@@ -33,8 +33,8 @@ jobs:
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
           echo "iterations=$json" >> $GITHUB_ENV
-        outputs:
-          iterations: $json
+        env:
+          iterations: ${{ env.iterations }}
 
   deploy_and_fetch:
     needs: setup
