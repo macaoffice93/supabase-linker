@@ -5,9 +5,8 @@ on:
     inputs:
       runs:
         description: 'Number of times to invoke the deploy workflow'
-        required: true
-        default: 3
-        type: number
+        required: false
+        type: string # Input must be a string
 
 jobs:
   invoke_reusable:
