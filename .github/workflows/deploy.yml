@@ -17,7 +17,7 @@ jobs:
       - name: Generate Matrix
         id: generate_matrix
         run: |
-          runs=${{ inputs.runs }}
+          runs=${{ github.event.inputs.runs }}
           echo "Generating iterations for $runs runs."
           if ! [[ $runs =~ ^[0-9]+$ ]]; then
             echo "Error: 'runs' must be a positive integer."
@@ -28,7 +28,7 @@ jobs:
           echo "Generated JSON: $json"
           echo "::set-output name=iterations::$json"
         env:
-          runs: ${{ inputs.runs }}
+          runs: ${{ github.event.inputs.runs }}
 
   deploy_and_fetch:
     needs: setup
@@ -67,21 +67,37 @@ jobs:
           echo "API Response: $RESPONSE"
           echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
           echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
-  
+
+      - name: Save Deployment Data
+        run: |
+          echo '{"PREVIEW_URL":"${DEPLOYMENT_URL}","API_RESPONSE":"${API_RESPONSE}"}' > output_${{ matrix.iteration }}.json
+
+      - name: Upload Deployment Data
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-data
+          path: output_${{ matrix.iteration }}.json
+
   summary:
     needs: deploy_and_fetch
     runs-on: ubuntu-latest
     steps:
+      - name: Download Deployment Data
+        uses: actions/download-artifact@v3
+        with:
+          name: deployment-data
+
       - name: Combine Deployment Summaries
         run: |
           echo "## Deployment Summary" > summary.md
-          for i in $(seq 1 ${{ inputs.runs }}); do
-            if [ -f output_$i.json ]; then
-              DEPLOYMENT_URL=$(jq -r '.PREVIEW_URL' output_$i.json)
-              API_RESPONSE=$(jq -r '.API_RESPONSE' output_$i.json)
+          for i in $(seq 1 ${{ needs.setup.outputs.iterations | fromJson | length }}); do
+            FILE="output_$i.json"
+            if [ -f "$FILE" ]; then
+              DEPLOYMENT_URL=$(jq -r '.PREVIEW_URL' "$FILE")
+              API_RESPONSE=$(jq -r '.API_RESPONSE' "$FILE")
               echo "### Deployment #$i" >> summary.md
-              echo "- **Deployment URL:** $DEPLOYMENT_URL" >> summary.md
-              echo "- **API Response:** $API_RESPONSE" >> summary.md
+              echo "- **Deployment URL:** [${DEPLOYMENT_URL}](${DEPLOYMENT_URL})" >> summary.md
+              echo "- **API Response:** \`${API_RESPONSE}\`" >> summary.md
             else
               echo "### Deployment #$i" >> summary.md
               echo "- **Deployment URL:** (No Data)" >> summary.md
