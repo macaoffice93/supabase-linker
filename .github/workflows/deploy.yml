@@ -23,10 +23,11 @@ jobs:
       - name: Generate Matrix
         id: generate_matrix
         run: |
-          runs=$(( ${{ inputs.runs }} ))
+          runs=${{ inputs.runs }}
           echo "Generating iterations for $runs runs."
-          seq 1 $runs | jq -R . | jq -s . > matrix.json
-          echo "::set-output name=iterations::$(cat matrix.json)"
+          json=$(seq 1 "$runs" | jq -R . | jq -s .)
+          echo "Generated matrix: $json"
+          echo "::set-output name=iterations::$json"
 
   deploy_and_fetch:
     needs: setup
@@ -67,7 +68,7 @@ jobs:
       - name: Combine Deployment Summaries
         run: |
           echo "## Deployment Summary" > summary.md
-          for ((i = 1; i <= ${{ inputs.runs }}; i++)); do
+          for i in $(seq 1 ${{ inputs.runs }}); do
             echo "### Deployment #$i" >> summary.md
             DEPLOYMENT_URL=$(cat output_$i.json | jq -r '.PREVIEW_URL')
             API_RESPONSE=$(cat output_$i.json | jq -r '.API_RESPONSE')
