@@ -100,10 +100,19 @@ jobs:
       - name: Combine Deployment Summaries
         run: |
           echo "## Deployment Summary" > summary.md
+
+          # Debug: Print iterations output
+          echo "Iterations Output: ${{ needs.setup.outputs.iterations }}"
+
           # Parse the iterations JSON and get the count
-          RUN_COUNT=$(echo '${{ needs.setup.outputs.iterations }}' | jq '. | length')
+          RUN_COUNT=$(echo "${{ needs.setup.outputs.iterations }}" | jq '. | length')
+          
+          # Debug: Print RUN_COUNT
+          echo "RUN_COUNT: $RUN_COUNT"
+
           echo "Total Deployments: $RUN_COUNT" >> summary.md
           echo "" >> summary.md
+
           for i in $(seq 1 "$RUN_COUNT"); do
             FILE="./deployment-data/output_$i.json"
             if [ -f "$FILE" ]; then
@@ -120,6 +129,7 @@ jobs:
               echo "" >> summary.md
             fi
           done
+
           echo "Generated Deployment Summary:"
           cat summary.md
 
