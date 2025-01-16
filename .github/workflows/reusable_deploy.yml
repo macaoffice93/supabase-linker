@@ -6,7 +6,7 @@ on:
       runs:
         description: 'Number of times to invoke the deploy workflow'
         required: false
-        type: string # Accept as string to avoid type mismatch
+        type: string
 
 jobs:
   reusable_deploy:
@@ -18,11 +18,14 @@ jobs:
       - name: Install jq (for JSON processing)
         run: sudo apt-get install -y jq
 
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
       - name: Invoke Deploy Workflow
         id: deploy_loop
         env:
-          RUNS: ${{ inputs.runs || '3' }} # Default to '3' if input is not provided
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUNS: ${{ inputs.runs || '3' }} # Default to 3 if not provided
         run: |
           RUNS_INT=$((RUNS)) # Convert to integer
           echo "Invoking the deploy workflow ${RUNS_INT} times..."
