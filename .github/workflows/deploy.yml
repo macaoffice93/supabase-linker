@@ -26,9 +26,9 @@ jobs:
           # Generate compact JSON
           json=$(seq 1 "$runs" | jq -c -R . | jq -s -c .)
           echo "Generated JSON: $json"
-          echo "::set-output name=iterations::$json"
-        env:
-          runs: ${{ inputs.runs }}
+          echo "iterations=$json" >> $GITHUB_ENV
+        outputs:
+          iterations: ${{ env.iterations }}
 
   deploy_and_fetch:
     needs: setup
@@ -61,12 +61,10 @@ jobs:
           echo "Fetching /api/config from $DEPLOYMENT_URL..."
           RESPONSE=$(curl -s "${DEPLOYMENT_URL}/api/config")
           if [ -z "$RESPONSE" ]; then
-            echo "Error: No response from /api/config."
-            exit 1
+            echo '{"PREVIEW_URL": "'${DEPLOYMENT_URL}'", "API_RESPONSE": "Error: No response"}' > output_${{ matrix.iteration }}.json
+          else
+            echo '{"PREVIEW_URL": "'${DEPLOYMENT_URL}'", "API_RESPONSE": "'${RESPONSE}'"}' > output_${{ matrix.iteration }}.json
           fi
-          echo "API Response: $RESPONSE"
-          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
-          echo "API_RESPONSE=${RESPONSE}" >> $GITHUB_ENV
 
   summary:
     needs: deploy_and_fetch
@@ -76,11 +74,17 @@ jobs:
         run: |
           echo "## Deployment Summary" > summary.md
           for i in $(seq 1 ${{ inputs.runs }}); do
-            echo "### Deployment #$i" >> summary.md
-            DEPLOYMENT_URL=$(cat output_$i.json | jq -r '.PREVIEW_URL')
-            API_RESPONSE=$(cat output_$i.json | jq -r '.API_RESPONSE')
-            echo "- **Deployment URL:** $DEPLOYMENT_URL" >> summary.md
-            echo "- **API Response:** $API_RESPONSE" >> summary.md
+            if [ -f output_$i.json ]; then
+              DEPLOYMENT_URL=$(jq -r '.PREVIEW_URL' output_$i.json)
+              API_RESPONSE=$(jq -r '.API_RESPONSE' output_$i.json)
+              echo "### Deployment #$i" >> summary.md
+              echo "- **Deployment URL:** $DEPLOYMENT_URL" >> summary.md
+              echo "- **API Response:** $API_RESPONSE" >> summary.md
+            else
+              echo "### Deployment #$i" >> summary.md
+              echo "- **Deployment URL:** (No Data)" >> summary.md
+              echo "- **API Response:** (No Data)" >> summary.md
+            fi
           done
           cat summary.md
 
