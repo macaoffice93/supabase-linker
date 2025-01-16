@@ -25,8 +25,12 @@ jobs:
         run: |
           runs=${{ inputs.runs }}
           echo "Generating iterations for $runs runs."
+          if ! [[ $runs =~ ^[0-9]+$ ]]; then
+            echo "Error: 'runs' must be a positive integer."
+            exit 1
+          fi
           json=$(seq 1 "$runs" | jq -R . | jq -s .)
-          echo "Generated matrix: $json"
+          echo "Generated JSON: $json"
           echo "::set-output name=iterations::$json"
 
   deploy_and_fetch:
