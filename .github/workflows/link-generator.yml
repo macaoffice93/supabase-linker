@@ -1,4 +1,4 @@
-name: Link generator
+name: Link Generator
 
 on:
   workflow_dispatch:
@@ -15,24 +15,27 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install GitHub CLI
-        run: sudo apt-get install -y gh
+      - name: Install GitHub CLI and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh jq
 
       - name: Authenticate GitHub CLI
+        run: |
+          echo "$GH_PAT" | gh auth login --with-token
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: gh auth login --with-token
+          GH_PAT: ${{ secrets.GH_PAT }}
 
       - name: Initialize Loop
         id: initialize
-        run: echo "Preparing to invoke deploy workflow ${{ inputs.runs }} times."
+        run: echo "Preparing to invoke deploy workflow ${{ github.event.inputs.runs }} times."
 
       - name: Dynamic Deployment Steps
         id: invoke
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          RUNS: ${{ github.event.inputs.runs }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          RUNS=${{ inputs.runs }}
           for ((i = 1; i <= RUNS; i++)); do
             echo "Running deploy step #$i..."
             OUTPUT=$(gh workflow run deploy.yml \
@@ -40,7 +43,7 @@ jobs:
               --ref main \
               --json)
             echo "$OUTPUT" > output_$i.json
-            DEPLOYMENT_URL=$(jq -r '.outputs.PREVIEW_URL' output_$i.json)
+            DEPLOYMENT_URL=$(echo "$OUTPUT" | jq -r '.runs[0].url')
             echo "Deployment URL for step #$i: $DEPLOYMENT_URL"
             echo "::group::Deployment #$i"
             echo "Triggered deploy with URL: $DEPLOYMENT_URL"
@@ -51,7 +54,6 @@ jobs:
         id: summarize
         run: |
           echo "All deployments completed. Here's a summary:"
-          for ((i = 1; i <= RUNS; i++)); do
-            OUTPUT=$(cat output_$i.json)
-            echo "Deployment #$i: $OUTPUT"
+          for file in output_*.json; do
+            echo "$(cat $file)"
           done
