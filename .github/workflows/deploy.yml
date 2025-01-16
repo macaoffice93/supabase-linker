@@ -4,7 +4,7 @@ on:
   workflow_dispatch: # Allows manual trigger of the workflow
   push:
     branches:
-      - master # Trigger on push to master branch
+      - master
   pull_request:
     types:
       - opened
@@ -14,7 +14,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]')" # Skip deployment for specific commits
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -22,10 +22,29 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Deploy to Vercel Action
+      - name: Deploy to Vercel
+        id: vercel_deploy
         uses: BetaHuhn/deploy-to-vercel-action@v1
         with:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }} # Your personal Vercel token
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }} # Organization ID from Vercel
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }} # Project ID from Vercel
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Extract Deployment Details
+        if: success()
+        run: |
+          echo "DEPLOYMENT_ID=$(cat $GITHUB_ENV | grep DEPLOYMENT_ID | cut -d'=' -f2)" >> $GITHUB_ENV
+          echo "DEPLOYMENT_URL=$(cat $GITHUB_ENV | grep DEPLOYMENT_URL | cut -d'=' -f2)" >> $GITHUB_ENV
+
+      - name: Add Deployment Summary
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const summaryContent = `
+            ## Vercel Deployment Summary
+            - **Deployment ID:** \`${process.env.DEPLOYMENT_ID}\`
+            - **URL:** [Visit Deployment](${process.env.DEPLOYMENT_URL})
+            `;
+            core.summary.addRaw(summaryContent).write();
