@@ -25,7 +25,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           for (( i=0; i<RUNS; i++ )); do
-            gh workflow run --repo "$GITHUB_REPOSITORY" Deploy to Vercel
+            gh workflow run --repo "$GITHUB_REPOSITORY" "Deploy to Vercel"
           done
 
       - name: Summarize Deployments
