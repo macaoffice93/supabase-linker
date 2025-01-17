@@ -52,29 +52,36 @@ jobs:
           CONFIG: ${{ github.event.inputs.config }}
         run: |
           echo "Updating deployment config at $API_URL with URL: $URL and Config: $CONFIG"
-
-          # Properly format the config JSON object
-          config_json=$(echo $CONFIG | jq -c .)  # Ensure it's compact JSON
-
-          # Make the API request with correctly formatted JSON
+          
+          # Make sure the config is a properly formatted JSON object, not a string
+          config_json=$(echo "$CONFIG" | jq -c .)  # This ensures that config is parsed and formatted properly
+      
+          # Double-check if the config is now valid JSON
+          if ! echo "$config_json" | jq empty; then
+            echo "Invalid JSON in CONFIG input. Please check the format."
+            exit 1
+          fi
+      
+          # Make the request with the correct JSON format
           update_response=$(curl -X POST $API_URL \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"url\": \"$URL\", \"config\": $config_json}" \
             -w "\nHTTP_STATUS:%{http_code}")
-
+      
           status_code=$(echo "$update_response" | grep HTTP_STATUS | awk -F':' '{print $2}')
           update_body=$(echo "$update_response" | sed '/HTTP_STATUS/d')
-
+      
           echo "Update response body: $update_body"
           echo "Status code: $status_code"
-
+      
           # Handle specific error codes or failures
           if [ "$status_code" -eq 500 ]; then
             echo "Internal Server Error occurred. Please check the server logs for more details."
           fi
-
+      
           if [ "$status_code" -ne 200 ]; then
             echo "Failed to update deployment config. Status code: $status_code"
             echo "Response body: $update_body"
             exit 1
+          fi
