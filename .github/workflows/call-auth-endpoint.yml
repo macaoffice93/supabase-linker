@@ -1,65 +1,70 @@
 name: Call Auth Endpoint and Update Deployment Config
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      url:
+        description: 'Deployment URL'
+        required: true
+      config:
+        description: 'Config JSON'
+        required: true
 
 jobs:
   call-endpoint:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
 
-      - name: Make POST request to Auth API
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Call Auth Endpoint
         env:
           API_URL: https://supabase-links-m70y39mly-ms-projects-78bf567a.vercel.app/api/auth
           EMAIL: ${{ secrets.SUPABASE_EMAIL }}
           PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
         run: |
           echo "Making POST request to $API_URL"
-          auth_response=$(curl -X POST "$API_URL" \
+          response=$(curl -X POST $API_URL \
             -H "Content-Type: application/json" \
-            -d '{"email": "$EMAIL", "password": "$PASSWORD"}' \
+            -d "{\"email\": \"${EMAIL}\", \"password\": \"${PASSWORD}\"}" \
             -w "\nHTTP_STATUS:%{http_code}")
           
-          # Get the status code and response body
-          status_code=$(echo "$auth_response" | grep HTTP_STATUS | awk -F':' '{print $2}')
-          auth_body=$(echo "$auth_response" | sed '/HTTP_STATUS/d')
-          
-          echo "Auth response body: $auth_body"
+          status_code=$(echo "$response" | grep HTTP_STATUS | awk -F':' '{print $2}')
+          body=$(echo "$response" | sed '/HTTP_STATUS/d')
+          echo "Response body: $body"
           echo "Status code: $status_code"
-
           if [ "$status_code" -ne 200 ]; then
-            echo "Failed to authenticate user. Status code: $status_code"
-            echo "Response body: $auth_body"
+            echo "Failed to call endpoint. Status code: $status_code"
             exit 1
           fi
-          
-          # Extract access token from auth response
-          ACCESS_TOKEN=$(echo "$auth_body" | jq -r '.session.access_token')
+          # Extract access token
+          access_token=$(echo "$body" | jq -r '.session.access_token')
+          echo "Access token: $access_token"
+          # Save the token as a secret for future steps
+          echo "ACCESS_TOKEN=$access_token" >> $GITHUB_ENV
 
-          echo "Authentication successful. Access token obtained: $ACCESS_TOKEN"
-
-      - name: Update deployment config
+      - name: Update Deployment Config
+        env:
+          API_URL: https://supabase-links-m70y39mly-ms-projects-78bf567a.vercel.app/api/deployments/update-config
+          ACCESS_TOKEN: ${{ env.ACCESS_TOKEN }}
+          URL: ${{ github.event.inputs.url }}
+          CONFIG: ${{ github.event.inputs.config }}
         run: |
-          echo "Updating deployment config at $DEPLOYMENT_API_URL with URL: $URL and Config: $CONFIG"
-          
-          update_response=$(curl -X POST $DEPLOYMENT_API_URL \
+          echo "Updating deployment config at $API_URL with URL: $URL and Config: $CONFIG"
+          update_response=$(curl -X POST $API_URL \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"url\": \"$URL\", \"config\": \"$CONFIG\"}" \
             -w "\nHTTP_STATUS:%{http_code}")
           
-          # Get the status code and response body
           status_code=$(echo "$update_response" | grep HTTP_STATUS | awk -F':' '{print $2}')
           update_body=$(echo "$update_response" | sed '/HTTP_STATUS/d')
-          
+
           echo "Update response body: $update_body"
           echo "Status code: $status_code"
           
+          # Handle specific error codes or failures
           if [ "$status_code" -eq 500 ]; then
             echo "Internal Server Error occurred. Please check the server logs for more details."
           fi
