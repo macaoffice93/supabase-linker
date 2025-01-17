@@ -52,10 +52,12 @@ jobs:
           CONFIG: ${{ github.event.inputs.config }}
         run: |
           echo "Updating deployment config at $API_URL with URL: $URL and Config: $CONFIG"
+          
+          # Make sure to pass the config as JSON directly, not as a string.
           update_response=$(curl -X POST $API_URL \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"url\": \"$URL\", \"config\": \"$CONFIG\"}" \
+            -d '{"url": "'"$URL"'", "config": '"$CONFIG"'}' \
             -w "\nHTTP_STATUS:%{http_code}")
           
           status_code=$(echo "$update_response" | grep HTTP_STATUS | awk -F':' '{print $2}')
