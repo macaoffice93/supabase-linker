@@ -1,0 +1,35 @@
+name: Call Auth Endpoint
+
+on:
+  workflow_dispatch:
+
+jobs:
+  call-endpoint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Call Auth Endpoint
+        env:
+          API_URL: https://supabase-links-m70y39mly-ms-projects-78bf567a.vercel.app/api/auth
+          EMAIL: ${{ secrets.SUPABASE_EMAIL }}
+          PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+        run: |
+          echo "Making POST request to $API_URL"
+          response=$(curl -X POST $API_URL \
+            -H "Content-Type: application/json" \
+            -d "{\"email\": \"${EMAIL}\", \"password\": \"${PASSWORD}\"}" \
+            -w "\nHTTP_STATUS:%{http_code}")
+          
+          status_code=$(echo "$response" | grep HTTP_STATUS | awk -F':' '{print $2}')
+          body=$(echo "$response" | sed '/HTTP_STATUS/d')
+
+          echo "Response body: $body"
+          echo "Status code: $status_code"
+
+          if [ "$status_code" -ne 200 ]; then
+            echo "Failed to call endpoint. Status code: $status_code"
+            exit 1
+          fi
