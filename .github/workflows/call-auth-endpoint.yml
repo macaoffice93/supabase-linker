@@ -52,30 +52,26 @@ jobs:
           CONFIG: ${{ github.event.inputs.config }}
         run: |
           echo "Updating deployment config at $API_URL with URL: $URL and Config: $CONFIG"
-          
-          # Make sure to pass the config as JSON directly, not as a string.
+
+          # Properly pass the config as a JSON object
           update_response=$(curl -X POST $API_URL \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{"url": "'"$URL"'", "config": '"$CONFIG"'}' \
             -w "\nHTTP_STATUS:%{http_code}")
-          
+
           status_code=$(echo "$update_response" | grep HTTP_STATUS | awk -F':' '{print $2}')
           update_body=$(echo "$update_response" | sed '/HTTP_STATUS/d')
 
           echo "Update response body: $update_body"
           echo "Status code: $status_code"
-          
+
           # Handle specific error codes or failures
           if [ "$status_code" -eq 500 ]; then
             echo "Internal Server Error occurred. Please check the server logs for more details."
           fi
-          
+
           if [ "$status_code" -ne 200 ]; then
             echo "Failed to update deployment config. Status code: $status_code"
             echo "Response body: $update_body"
             exit 1
-          fi
-
-      - name: Final status
-        run: echo "Deployment config updated successfully!"
