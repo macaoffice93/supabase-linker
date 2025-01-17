@@ -53,11 +53,14 @@ jobs:
         run: |
           echo "Updating deployment config at $API_URL with URL: $URL and Config: $CONFIG"
 
-          # Ensure the config is properly formatted JSON
+          # Properly format the config JSON object
+          config_json=$(echo $CONFIG | jq -c .)  # Ensure it's compact JSON
+
+          # Make the API request with correctly formatted JSON
           update_response=$(curl -X POST $API_URL \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"url": "'"$URL"'", "config": '"$CONFIG"'}' \
+            -d "{\"url\": \"$URL\", \"config\": $config_json}" \
             -w "\nHTTP_STATUS:%{http_code}")
 
           status_code=$(echo "$update_response" | grep HTTP_STATUS | awk -F':' '{print $2}')
@@ -75,4 +78,3 @@ jobs:
             echo "Failed to update deployment config. Status code: $status_code"
             echo "Response body: $update_body"
             exit 1
-          fi
