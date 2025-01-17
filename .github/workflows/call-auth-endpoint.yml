@@ -1,4 +1,4 @@
-name: Call Auth Endpoint
+name: Call Auth Endpoint and Use Token
 
 on:
   workflow_dispatch:
@@ -33,3 +33,21 @@ jobs:
             echo "Failed to call endpoint. Status code: $status_code"
             exit 1
           fi
+
+          # Extract access token
+          access_token=$(echo "$body" | jq -r '.session.access_token')
+          echo "Access token: $access_token"
+
+          # Save the token as a secret for future steps (if required)
+          echo "ACCESS_TOKEN=$access_token" >> $GITHUB_ENV
+
+      # Example of using the token in further requests (can be added as another job or step)
+      - name: Use Access Token in Another API Call
+        env:
+          ACCESS_TOKEN: ${{ env.ACCESS_TOKEN }}
+        run: |
+          echo "Making another request with the access token"
+          another_response=$(curl -X GET "https://example.com/protected-endpoint" \
+            -H "Authorization: Bearer $ACCESS_TOKEN")
+          
+          echo "Another API Response: $another_response"
