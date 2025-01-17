@@ -1,4 +1,4 @@
-name: Call Auth Endpoint and Update Deployment Config
+name: Update Deployment Config
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
         description: 'Deployment URL'
         required: true
       config:
-        description: 'Config JSON'
+        description: 'Config'
         required: true
 
 jobs:
