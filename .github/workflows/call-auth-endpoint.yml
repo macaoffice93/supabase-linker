@@ -1,7 +1,14 @@
-name: Call Auth Endpoint and Use Token
+name: Call Auth Endpoint and Update Deployment Config
 
 on:
   workflow_dispatch:
+    inputs:
+      url:
+        description: 'Deployment URL'
+        required: true
+      config:
+        description: 'Config JSON'
+        required: true
 
 jobs:
   call-endpoint:
@@ -38,16 +45,20 @@ jobs:
           access_token=$(echo "$body" | jq -r '.session.access_token')
           echo "Access token: $access_token"
 
-          # Save the token as a secret for future steps (if required)
+          # Save the token as a secret for future steps
           echo "ACCESS_TOKEN=$access_token" >> $GITHUB_ENV
 
-      # Example of using the token in further requests (can be added as another job or step)
-      - name: Use Access Token in Another API Call
+      - name: Update Deployment Config
         env:
+          API_URL: https://supabase-links-m70y39mly-ms-projects-78bf567a.vercel.app/api/deployments/update-config
           ACCESS_TOKEN: ${{ env.ACCESS_TOKEN }}
+          URL: ${{ github.event.inputs.url }}
+          CONFIG: ${{ github.event.inputs.config }}
         run: |
-          echo "Making another request with the access token"
-          another_response=$(curl -X GET "https://example.com/protected-endpoint" \
-            -H "Authorization: Bearer $ACCESS_TOKEN")
+          echo "Updating deployment config at $API_URL with URL: $URL and Config: $CONFIG"
+          update_response=$(curl -X POST $API_URL \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"url\": \"$URL\", \"config\": \"$CONFIG\"}")
           
-          echo "Another API Response: $another_response"
+          echo "Update response: $update_response"
