@@ -1,10 +1,10 @@
-name: Deploy to Vercel
+name: Generate new links
 
 on:
   workflow_dispatch:
     inputs:
       runs:
-        description: 'Number of times to invoke the deploy workflow'
+        description: 'Number of links to generate'
         required: true
         type: string
 
