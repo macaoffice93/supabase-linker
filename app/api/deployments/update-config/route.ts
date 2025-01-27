@@ -45,31 +45,65 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update the deployment config in the database
-    const { data, error } = await supabase
+    // Check if a row already exists for the given URL
+    const { data: existingData, error: fetchError } = await supabase
       .from("deployments")
-      .update({ config: parsedConfig, updated_at: new Date() })
-      .eq("url", url)
-      .select("*");
+      .select("*")
+      .eq("url", url);
 
-    if (error) {
+    if (fetchError) {
       return NextResponse.json(
-        { error: "Failed to update config" },
+        { error: "Failed to fetch existing data" },
         { status: 500 }
       );
     }
 
-    if (data.length === 0) {
+    if (existingData.length === 0) {
+      // If no row exists, insert a new row
+      const { data: insertData, error: insertError } = await supabase
+        .from("deployments")
+        .insert({
+          url,
+          config: parsedConfig,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .select("*");
+
+      if (insertError) {
+        return NextResponse.json(
+          { error: "Failed to create new config" },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
-        { error: "No matching deployment found for the given URL" },
-        { status: 404 }
+        { message: "Config created successfully", data: insertData[0] },
+        { status: 201 }
+      );
+    } else {
+      // If a row exists, update the existing row
+      const { data: updateData, error: updateError } = await supabase
+        .from("deployments")
+        .update({
+          config: parsedConfig,
+          updated_at: new Date(),
+        })
+        .eq("url", url)
+        .select("*");
+
+      if (updateError) {
+        return NextResponse.json(
+          { error: "Failed to update config" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        { message: "Config updated successfully", data: updateData[0] },
+        { status: 200 }
       );
     }
-
-    return NextResponse.json(
-      { message: "Config updated successfully", data: data[0] },
-      { status: 200 }
-    );
   } catch (err) {
     console.error("Unexpected error:", err);
     return NextResponse.json(
