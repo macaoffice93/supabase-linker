@@ -5,23 +5,29 @@ export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  const token = req.headers.get("Authorization")?.split("Bearer ")[1];
-
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized: No token provided" }, { status: 401 });
-  }
-
-  // Create a Supabase client with the provided token
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-
   try {
+    const token = req.headers.get("Authorization")?.split("Bearer ")[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Unauthorized: No token provided" },
+        { status: 401 }
+      );
+    }
+
+    // Create a Supabase client with the provided token
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
     // Retrieve user info
     const { data: user, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid token" },
+        { status: 401 }
+      );
     }
 
     // Parse the request body
@@ -35,9 +41,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate JSON in the config
-    let parsedConfig;
+    let parsedConfig: any;
     try {
-      parsedConfig = JSON.parse(config);
+      parsedConfig = typeof config === "string" ? JSON.parse(config) : config;
     } catch {
       return NextResponse.json(
         { error: "Invalid JSON in config" },
@@ -104,10 +110,12 @@ export async function POST(req: NextRequest) {
         { status: 200 }
       );
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Unexpected error:", err);
+
+    // Return a JSON response for unexpected errors
     return NextResponse.json(
-      { error: "An unexpected error occurred" },
+      { error: "An unexpected error occurred", details: err.message },
       { status: 500 }
     );
   }

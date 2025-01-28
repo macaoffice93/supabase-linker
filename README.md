@@ -1,104 +1,115 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# Links Creation using Vercel + Supabase Proof of Concept
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+## Useful Links
+- [GitHub Repository](https://github.com/macaoffice93/supabase-linker)
+- [Production Vercel Deployment](https://supabase-links.vercel.app/)
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## Requirements
+1. Generate multiple unique links, each with a distinct subdomain.
+2. Configure the data each link retrieves individually.
+3. Protect all configuration settings from unauthorized access.
+4. Create multiple links simultaneously.
 
-## Features
+## Technology Stack
+- **Next.js Application**: Full-stack framework for frontend and backend functionality.
+- **Supabase**: PostgreSQL database and authentication integration.
+- **Vercel**: Hosting and serverless functions.
+- **GitHub Actions**: Continuous deployment (CD) workflows.
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Middleware
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+## Solution Overview
+1. **Next.js Application**:
+   - Handles both frontend and backend functionality.
+   - Utilizes cloud functions for backend logic.
 
-## Demo
+2. **Supabase PostgreSQL Database**:
+   - Stores data related to link configurations.
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+3. **Supabase Authentication**:
+   - Secures data and backend endpoints, ensuring only authorized access.
 
-## Deploy to Vercel
+4. **Vercel Hosting**:
+   - Hosts the application and generates unique subdomain links using Vercel's preview links feature.
 
-Vercel deployment will guide you through creating a Supabase account and project.
+5. **GitHub Actions**:
+   - Automates link creation and configuration through workflows.
+   - Enables users to trigger workflows to configure or update link settings.
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+## Example Workflows
+### 1. Generating New Links
+- Users can create one or more links by executing the `deploy.yml` workflow.
+- **Parameters**: Number of links (e.g., 3).
+- **Result**: Generates the specified number of links and displays details about each link and its default configuration.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+### 2. Configuring a Link
+- Users can configure a link with new values by executing the `call-auth-endpoint.yml` workflow.
+- **Parameters**:
+  - `URL`: The link URL to configure.
+  - `Configuration Value`: The new configuration value.
+- **Result**: Updates the link's configuration.
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+### 3. Retrieving Link Configuration
+- Query the `/api/config` endpoint of the link to retrieve its configuration.
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+## Behind the Scenes
+- **Deployments Table**: Stores deployment information, including URLs and configuration values.
+- **Modifying Configuration**: 
+  - Update configurations via `/api/deployments/update-config` with a valid JWT token.
+  - Authenticate using the `/api/auth` endpoint.
 
-## Clone and run locally
+## API Documentation
+### POST `/api/auth`
+- **Description**: Authenticates users with email and password via Supabase.
+- **Headers**:
+  - `Content-Type`: `application/json`
+  - `Authorization`: `Bearer <JWT token>`
+- **Request Body**:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "userpassword"
+  }
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+### GET `/api/config`
+**Description**: Retrieves or initializes configuration settings for a deployment based on its URL.
 
-2. Create a Next.js app using the Supabase Starter template npx command
+**Parameters**:
+- `url`: The URL of the deployment.
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+---
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+### POST `/api/deployments/update-config`
+**Description**: Updates configuration settings for a deployment.
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+**Headers**:
+- `Content-Type`: `application/json`
+- `Authorization`: `Bearer <JWT token>`
 
-3. Use `cd` to change into the app's directory
+**Request Body**:
+```json
+{
+  "url": "https://your-deployment-url.com",
+  "config": "{\"featureEnabled\": true, \"theme\": \"dark\"}"
+}
+```
+## Gotchas and Future Improvements
 
-   ```bash
-   cd with-supabase-app
-   ```
+1. **Supabase Free Plan**:
+   - Free plans pause after a week of inactivity. Regular queries are needed to keep the project active.
 
-4. Rename `.env.example` to `.env.local` and update the following:
+2. **Vercel Webhooks**:
+   - Could replace parts of the `deploy.yml` workflow but requires a Pro or Enterprise plan.
 
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=[INSERT SUPABASE PROJECT API ANON KEY]
-   ```
+3. **Frontend Considerations**:
+   - Add a frontend page for configuration management.
+   - Alternatively, minimize frontend functionality.
 
-   Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://app.supabase.com/project/_/settings/api)
+4. **User Access Management**:
+   - Manage user access directly via Supabase.
 
-5. You can now run the Next.js local development server:
+---
 
-   ```bash
-   npm run dev
-   ```
-
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
-
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+## Conclusion
+This proof of concept integrates Vercel, Supabase, and GitHub Actions to automate the creation, configuration, and management of unique links with secure configurations.
+---
+## Telegram bot integration
+Visit [GitHub Repository](https://github.com/macaoffice93/telegram-bot-linker)
